@@ -20,30 +20,15 @@ struct Widget : juce::Component
     int num = 0;
 };
 
-struct OwnedArrayComponent : juce::Component
+struct OwnedArrayComponent : juce::Component, juce::Button::Listener
 {
-    OwnedArrayComponent()
-    {
-        for (int i = 0; i < 10; i++)
-        {
-            auto* widget = widgets.add(new Widget(i));
-            addAndMakeVisible(widget);
-        }
-    }
+    OwnedArrayComponent();
+    ~OwnedArrayComponent();
+    void resized() override;
+    void buttonClicked(juce::Button* clickedButton) override;
 
-    void resized() override
-    {
-        auto width = getWidth() / static_cast<float>(widgets.size());
-        int x = 0;
-        auto h = getHeight();
-        for (auto* widget : widgets)
-        {
-            //widget->setBounds(x, 0, 0, static_cast<int>(width));
-            widget->setBounds(x, 0, width, h);
-            x += width;
-        }
-    }
-    juce::OwnedArray<Widget> widgets;
+private:
+    juce::OwnedArray<juce::TextButton> buttons;
 };
 
 struct MyComp : juce::Component
@@ -90,27 +75,30 @@ public:
 
     void mouseEnter(const juce::MouseEvent& e) override
     {
-        DBG("MainComp Mouse Enter " << counter);
-        counter++;
+        //DBG("MainComp Mouse Enter " << counter);
+        //counter++;
     }
     void mouseExit(const juce::MouseEvent& e) override
     {
-        DBG("MainComp Mouse Exit " << counter);
-        counter++;
+        //DBG("MainComp Mouse Exit " << counter);
+        //counter++;
     }
     void mouseMove(const juce::MouseEvent& e) override
     {
-        DBG( " MainComp Mouse Move " << counter);
-        counter++;
+        //DBG( "MainComp Mouse Move " << counter);
+        //counter++;
     }
-
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        DBG( "You clicked the mouse" );
+    }
 
 private:
     //==============================================================================
     // Your private member variables go here...
     MyComp myComp;
     OwnedArrayComponent ownedArrayComp;
-    int counter = 0;
+    //int counter = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
