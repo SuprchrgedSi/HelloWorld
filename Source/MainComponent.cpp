@@ -3,11 +3,14 @@
 //==============================================================================
 MainComponent::MainComponent()
 {
+    addAndMakeVisible(myComp);
+    myComp.addMouseListener(this,false);
     setSize (600, 400);
 }
 
 MainComponent::~MainComponent()
 {
+    myComp.removeMouseListener(this);
 }
 
 //==============================================================================
@@ -23,6 +26,7 @@ void MainComponent::paint (juce::Graphics& g)
 
 void MainComponent::resized()
 {
+    myComp.setBounds(30, 30, 100, 100);
     // This is called when the MainComponent is resized.
     // If you add any child components, this is where you should
     // update their positions.
