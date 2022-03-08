@@ -2,7 +2,17 @@
 
 #include <JuceHeader.h>
 
-struct Widget : juce::Component
+struct DualButton : public juce::Component
+{
+    DualButton();
+    void resized() override;
+
+private:
+    juce::TextButton button1{ "button1" }, button2{ "button2" };
+
+};
+
+struct Widget : public  juce::Component
 {
     Widget(int i) : num(i) {}
     void paint(juce::Graphics& g) override 
@@ -98,6 +108,7 @@ private:
     // Your private member variables go here...
     MyComp myComp;
     OwnedArrayComponent ownedArrayComp;
+    DualButton dualButton;
     //int counter = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
