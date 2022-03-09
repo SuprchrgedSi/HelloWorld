@@ -34,6 +34,50 @@ struct Widget : public  juce::Component
     int num = 0;
 };
 
+struct AsyncHiResGui : juce::Component, juce::AsyncUpdater, juce::HighResolutionTimer
+{
+    void handleAsyncUpdate() override
+    {
+        paintColor = (++paintColor) % maxColors;
+        repaint();
+    }
+    void hiResTimerCallback() override 
+    { 
+        //triggerAsyncUpdate(); 
+        repaint();
+    }
+    void paint(juce::Graphics& g) override
+    {
+        switch (paintColor)
+        {
+            case 0:
+                g.setColour(juce::Colours::red);
+                break;
+            case 1:
+                g.setColour(juce::Colours::green);
+                break;
+            case 2:
+                g.setColour(juce::Colours::orange);
+                break;
+        }
+        g.fillAll();
+    }
+
+    AsyncHiResGui() 
+    {
+        startTimer(1000 / 5);
+    }
+    ~AsyncHiResGui() 
+    { 
+        stopTimer(); 
+        cancelPendingUpdate();
+    }
+
+private:
+    int paintColor = 0;
+    const int maxColors{3};
+};
+
 struct RepeatingThing : juce::Component, juce::Timer
 {
     void timerCallback() override
@@ -132,6 +176,7 @@ private:
     OwnedArrayComponent ownedArrayComp;
     RepeatingThing repeatingThing;
     DualButton dualButton;
+    AsyncHiResGui asyncGui;
     
     //int counter = 0;
 
