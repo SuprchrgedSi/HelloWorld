@@ -6,16 +6,7 @@ DualButton::DualButton()
 {
     addAndMakeVisible(button1);
     addAndMakeVisible(button2);
-
-    button1.onClick = [this]()
-    {
-        DBG("Button1 size " << this->button1.getBounds().toString());
-    };
-
-    button2.onClick = [this]()
-    {
-        DBG("Button2 size " << this->button2.getBounds().toString());
-    };
+    
 }
 
 void DualButton::resized()
@@ -24,6 +15,16 @@ void DualButton::resized()
     button1.setBounds(bounds.removeFromLeft(30));
     button2.setBounds(bounds);
     
+}
+
+void DualButton::setButton1Handler(std::function<void()> f)
+{
+    button1.onClick = f;
+}
+
+void DualButton::setButton2Handler(std::function<void()> f)
+{
+    button2.onClick = f;
 }
 
 //=================================================
@@ -85,6 +86,16 @@ MainComponent::MainComponent()
 
     addAndMakeVisible(dualButton);
     addAndMakeVisible(repeatingThing);
+
+    dualButton.setButton1Handler([this]()
+    {
+        repeatingThing.startTimerHz(1);
+    });
+
+    dualButton.setButton2Handler([this]()
+    {
+        repeatingThing.startTimerHz(4);
+    });
 
     setSize (600, 400);
 }

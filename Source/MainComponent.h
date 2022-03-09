@@ -7,7 +7,11 @@ struct DualButton : public juce::Component
     DualButton();
     void resized() override;
 
+    void setButton1Handler(std::function<void()> f);
+    void setButton2Handler(std::function<void()> f);
+
 private:
+
     juce::TextButton button1{ "button1" }, button2{ "button2" };
 
 };
@@ -126,8 +130,8 @@ private:
     // Your private member variables go here...
     MyComp myComp;
     OwnedArrayComponent ownedArrayComp;
-    DualButton dualButton;
     RepeatingThing repeatingThing;
+    DualButton dualButton;
     
     //int counter = 0;
 
