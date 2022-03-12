@@ -17,8 +17,6 @@ struct ImageProcessingThread : juce::Thread
     }
     void run() override;
 
-    //void setUpdateRendererFunc(std::function<void(juce::Image&&)> f) { updateRenderer = std::move(f); };
-
 private:
     int w {0}, h {0};
     ImagePassingFunc updateRenderer;
@@ -54,22 +52,30 @@ private:
     std::array<juce::Image, Max> images;
 };
 
-
-struct Renderer : juce::Component, juce::Timer// juce::AsyncUpdater
+//=============================================
+struct Renderer : juce::Component, juce::Timer
 {
     Renderer();
     ~Renderer();
     void paint(juce::Graphics& g) override;
-    //void handleAsyncUpdate() override;
     void timerCallback() override;
-
 
 private:
     std::unique_ptr<ImageProcessingThread> processingThread;
     std::unique_ptr<LambdaTimer> lambdaTimer;
-    //juce::Atomic<bool> firstImage{ true };
     ImageBuffer<5> imageToRender;
 };
+//============================================
+struct Renderer2 : juce::Component
+{
+    Renderer2();
+    void paint(juce::Graphics& g) override;
+
+private:
+    void loop();
+    ImageBuffer<5> imageToRender;
+};
+
 //============================================
 struct DualButton : public juce::Component
 {
@@ -99,7 +105,6 @@ struct Widget : public  juce::Component
                 juce::Justification::centred,
                 1);
         }
-//private:
     int num = 0;
 };
 
@@ -113,7 +118,6 @@ struct AsyncHiResGui : juce::Component, juce::AsyncUpdater, juce::HighResolution
     void hiResTimerCallback() override 
     { 
         triggerAsyncUpdate(); 
-        //repaint();
     }
     void paint(juce::Graphics& g) override
     {
@@ -247,6 +251,7 @@ private:
     DualButton dualButton;
     AsyncHiResGui asyncGui;
     Renderer renderer;
+    Renderer2 renderer2;
     
     //int counter = 0;
 

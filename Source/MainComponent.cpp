@@ -12,18 +12,8 @@ void ImageProcessingThread::run()
 
         auto canvas = juce::Image(juce::Image::PixelFormat::RGB, w, h, true);
 
-        if (threadShouldExit())
-            break;
-
-        bool shouldBail = false;
-
         for (int x = 0; x < w; x++)
         {
-            if (threadShouldExit())
-            {
-                shouldBail = true;
-                break;
-            }
             for (int y = 0; y < h; y++)
             {
                 canvas.setPixelAt(x, y, juce::Colour(r.nextFloat(), 
@@ -32,9 +22,6 @@ void ImageProcessingThread::run()
                                                      1.0f));
             }
         }
-
-        if (threadShouldExit() || shouldBail)
-            break;
 
         if (updateRenderer)
             updateRenderer(canvas);
@@ -66,13 +53,8 @@ Renderer::Renderer()
                                                                    getHeight(), 
                                                                    [this](juce::Image image)
         {
-            /*int renderIndex = firstImage.get() ? 0 : 1;
-            firstImage.set (!firstImage.get());
-            imageToRender[renderIndex] = image;*/
-
+            
             imageToRender.push(image);
-
-            //triggerAsyncUpdate();
 
             if (!processingThread->threadShouldExit())
             {
@@ -87,24 +69,79 @@ Renderer::Renderer()
 Renderer::~Renderer()
 {
     stopTimer();
-    //cancelPendingUpdate();
     lambdaTimer.reset();
     processingThread.reset();
 }
 void Renderer::paint(juce::Graphics& g)
 {
-    //g.drawImage(firstImage.get() ? imageToRender[0] : imageToRender[1] ,
     g.drawImage(imageToRender.read() ,
                 getLocalBounds().toFloat());
 }
-//void Renderer::handleAsyncUpdate()
-//{
-//    repaint();
-//}
 
 void Renderer::timerCallback()
 {
     repaint();
+}
+
+//================================================
+Renderer2::Renderer2()
+{
+    juce::Timer::callAfterDelay(10, [this]()
+    {
+        SafePointer<Renderer2> safePtr(this);
+        if (safePtr.getComponent()) 
+            safePtr->loop();
+    });
+        
+}
+
+void Renderer2::paint(juce::Graphics& g)
+{
+    g.drawImage(imageToRender.read(),
+        getLocalBounds().toFloat());
+}
+    
+void Renderer2::loop()
+{
+    auto w = getWidth();
+    auto h = getHeight();
+
+    juce::Thread::launch([this, w, h]()
+    {
+        juce::Random r;
+
+        auto canvas = juce::Image(juce::Image::PixelFormat::RGB, w, h, true);
+
+        for (int x = 0; x < w; x++)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                canvas.setPixelAt(x, y, juce::Colour(r.nextFloat(),
+                    r.nextFloat(),
+                    r.nextFloat(),
+                    1.0f));
+            }
+        }
+
+        SafePointer<Renderer2> safePtr(this);
+        if (safePtr.getComponent())
+            safePtr->imageToRender.push(canvas);
+
+        juce::Timer::callAfterDelay(10, [this]() 
+        { 
+            SafePointer<Renderer2> safePtr(this);
+            if (safePtr.getComponent())
+                safePtr->repaint(); 
+        });
+        juce::Timer::callAfterDelay(1000, [this]() 
+        { 
+            SafePointer<Renderer2> safePtr(this);
+            if (safePtr.getComponent())
+                safePtr->loop(); 
+        });
+
+    });
+
 }
 
 //================================================
@@ -159,7 +196,6 @@ void OwnedArrayComponent::resized()
     auto h = getHeight();
     for (auto* widget : buttons)
     {
-        //widget->setBounds(x, 0, 0, static_cast<int>(width));
         widget->setBounds(x, 0, width, h);
         x += width;
     }
@@ -185,8 +221,7 @@ void OwnedArrayComponent::buttonClicked(juce::Button* clickedButton)
 MainComponent::MainComponent()
 {
     addAndMakeVisible(myComp);
-    //myComp.addMouseListener(this,false);
-
+    
     addAndMakeVisible(ownedArrayComp);
     ownedArrayComp.addMouseListener(this, true);
 
@@ -206,8 +241,10 @@ MainComponent::MainComponent()
     addAndMakeVisible(asyncGui);
 
     addAndMakeVisible(renderer);
+    
+    addAndMakeVisible(renderer2);
 
-    setSize (600, 400);
+    setSize (800, 400);
 }
 
 MainComponent::~MainComponent()
@@ -243,4 +280,6 @@ void MainComponent::resized()
     asyncGui.setBounds(repeatingThing.getBounds().withX(repeatingThing.getRight() + 5));
 
     renderer.setBounds(asyncGui.getBounds().withX(asyncGui.getRight() + 5));
+    
+    renderer2.setBounds(renderer.getBounds().withX(renderer.getRight() + 5));
 }
