@@ -6,7 +6,8 @@
 //============================================
 struct ImageProcessingThread : juce::Thread
 {
-    ImageProcessingThread(int w_, int h_) : Thread("ImageProcessingThread") , w(w_), h(h_)
+    using ImagePassingFunc = std::function<void(juce::Image)>;
+    ImageProcessingThread(int w_, int h_, ImagePassingFunc f) : Thread("ImageProcessingThread"), updateRenderer(std::move(f)), w(w_), h(h_)
     {
         startThread();
     }
@@ -16,11 +17,11 @@ struct ImageProcessingThread : juce::Thread
     }
     void run() override;
 
-    void setUpdateRendererFunc(std::function<void(juce::Image&&)> f) { updateRenderer = std::move(f); };
+    //void setUpdateRendererFunc(std::function<void(juce::Image&&)> f) { updateRenderer = std::move(f); };
 
 private:
     int w {0}, h {0};
-    std::function<void(juce::Image&&)> updateRenderer;
+    ImagePassingFunc updateRenderer;
     juce::Random r;
 };
 //============================================
@@ -34,19 +35,40 @@ private:
     std::function<void()> lambda;
 };
 //============================================
+template<int Max>
+struct ImageBuffer
+{
+    juce::Image read()
+    {
+        const juce::ScopedReadLock srl(rwLock);
+        return images[(index % Max)];
+    }
+    void push(juce::Image image)
+    {
+        const juce::ScopedWriteLock swl(rwLock);
+        images[(++index % Max)] = image;
+    }
+private:
+    juce::ReadWriteLock rwLock;
+    size_t index = 0;
+    std::array<juce::Image, Max> images;
+};
 
-struct Renderer : juce::Component, juce::AsyncUpdater
+
+struct Renderer : juce::Component, juce::Timer// juce::AsyncUpdater
 {
     Renderer();
     ~Renderer();
     void paint(juce::Graphics& g) override;
-    void handleAsyncUpdate() override;
+    //void handleAsyncUpdate() override;
+    void timerCallback() override;
+
 
 private:
     std::unique_ptr<ImageProcessingThread> processingThread;
     std::unique_ptr<LambdaTimer> lambdaTimer;
-    bool firstImage{ true };
-    std::array<juce::Image, 2> imageToRender;
+    //juce::Atomic<bool> firstImage{ true };
+    ImageBuffer<5> imageToRender;
 };
 //============================================
 struct DualButton : public juce::Component

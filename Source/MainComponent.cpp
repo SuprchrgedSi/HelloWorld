@@ -37,7 +37,7 @@ void ImageProcessingThread::run()
             break;
 
         if (updateRenderer)
-            updateRenderer(std::move(canvas));
+            updateRenderer(canvas);
 
         wait(-1);
     }
@@ -59,39 +59,54 @@ void LambdaTimer::timerCallback()
 //================================================
 Renderer::Renderer()
 {
+    startTimerHz(20);
     lambdaTimer = std::make_unique<LambdaTimer>(10, [this]()
     {
-        processingThread = std::make_unique<ImageProcessingThread>(getWidth(), getHeight());
-        processingThread->setUpdateRendererFunc([this](juce::Image&& image)
+        processingThread = std::make_unique<ImageProcessingThread>(getWidth(), 
+                                                                   getHeight(), 
+                                                                   [this](juce::Image image)
         {
-            int renderIndex = firstImage ? 0 : 1;
-            firstImage = !firstImage;
-            imageToRender[renderIndex] = std::move(image);
+            /*int renderIndex = firstImage.get() ? 0 : 1;
+            firstImage.set (!firstImage.get());
+            imageToRender[renderIndex] = image;*/
 
-            triggerAsyncUpdate();
+            imageToRender.push(image);
 
-            lambdaTimer = std::make_unique<LambdaTimer>(1000, [this]()
+            //triggerAsyncUpdate();
+
+            if (!processingThread->threadShouldExit())
             {
-                processingThread->notify();
-            });
+                lambdaTimer = std::make_unique<LambdaTimer>(1000, [this]()
+                {
+                    processingThread->notify();
+                });
+            }
         });
     });
 }
 Renderer::~Renderer()
 {
-    cancelPendingUpdate();
-    processingThread.reset();
+    stopTimer();
+    //cancelPendingUpdate();
     lambdaTimer.reset();
+    processingThread.reset();
 }
 void Renderer::paint(juce::Graphics& g)
 {
-    g.drawImage(firstImage ? imageToRender[0] : imageToRender[1],
+    //g.drawImage(firstImage.get() ? imageToRender[0] : imageToRender[1] ,
+    g.drawImage(imageToRender.read() ,
                 getLocalBounds().toFloat());
 }
-void Renderer::handleAsyncUpdate()
+//void Renderer::handleAsyncUpdate()
+//{
+//    repaint();
+//}
+
+void Renderer::timerCallback()
 {
     repaint();
 }
+
 //================================================
 DualButton::DualButton()
 {
