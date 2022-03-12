@@ -1,7 +1,98 @@
 #include "MainComponent.h"
 
-//================================================
 
+//===============================================
+
+void ImageProcessingThread::run()
+{
+    while (true)
+    {
+        if (threadShouldExit())
+            break;
+
+        auto canvas = juce::Image(juce::Image::PixelFormat::RGB, w, h, true);
+
+        if (threadShouldExit())
+            break;
+
+        bool shouldBail = false;
+
+        for (int x = 0; x < w; x++)
+        {
+            if (threadShouldExit())
+            {
+                shouldBail = true;
+                break;
+            }
+            for (int y = 0; y < h; y++)
+            {
+                canvas.setPixelAt(x, y, juce::Colour(r.nextFloat(), 
+                                                     r.nextFloat(), 
+                                                     r.nextFloat(), 
+                                                     1.0f));
+            }
+        }
+
+        if (threadShouldExit() || shouldBail)
+            break;
+
+        if (updateRenderer)
+            updateRenderer(std::move(canvas));
+
+        wait(-1);
+    }
+}
+//================================================
+LambdaTimer::LambdaTimer(int ms, std::function<void()> f) : lambda(std::move(f))
+{
+    startTimer(ms);
+}
+LambdaTimer::~LambdaTimer()
+{
+    stopTimer();
+}
+void LambdaTimer::timerCallback()
+{
+    stopTimer();
+    if ( lambda ) lambda();
+}
+//================================================
+Renderer::Renderer()
+{
+    lambdaTimer = std::make_unique<LambdaTimer>(10, [this]()
+    {
+        processingThread = std::make_unique<ImageProcessingThread>(getWidth(), getHeight());
+        processingThread->setUpdateRendererFunc([this](juce::Image&& image)
+        {
+            int renderIndex = firstImage ? 0 : 1;
+            firstImage = !firstImage;
+            imageToRender[renderIndex] = std::move(image);
+
+            triggerAsyncUpdate();
+
+            lambdaTimer = std::make_unique<LambdaTimer>(1000, [this]()
+            {
+                processingThread->notify();
+            });
+        });
+    });
+}
+Renderer::~Renderer()
+{
+    cancelPendingUpdate();
+    processingThread.reset();
+    lambdaTimer.reset();
+}
+void Renderer::paint(juce::Graphics& g)
+{
+    g.drawImage(firstImage ? imageToRender[0] : imageToRender[1],
+                getLocalBounds().toFloat());
+}
+void Renderer::handleAsyncUpdate()
+{
+    repaint();
+}
+//================================================
 DualButton::DualButton()
 {
     addAndMakeVisible(button1);
@@ -99,6 +190,8 @@ MainComponent::MainComponent()
 
     addAndMakeVisible(asyncGui);
 
+    addAndMakeVisible(renderer);
+
     setSize (600, 400);
 }
 
@@ -133,4 +226,6 @@ void MainComponent::resized()
     repeatingThing.setBounds(dualButton.getBounds().withX(dualButton.getRight() + 5));
 
     asyncGui.setBounds(repeatingThing.getBounds().withX(repeatingThing.getRight() + 5));
+
+    renderer.setBounds(asyncGui.getBounds().withX(asyncGui.getRight() + 5));
 }
